@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Daily Operations Report</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📧</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📧</text></svg>">
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   <style>
@@ -276,22 +277,22 @@
       <div class="card-body">
         <div class="grid-4">
           <div class="field">
-            <label>Number of bookings</label>
-            <input type="number" id="resa" name="expected_guests" placeholder="0" min="0">
-          </div>
-          <div class="field">
             <label>No-shows (#)</label>
             <input type="number" id="ns_nb" name="no_show_count" placeholder="0" min="0">
           </div>
           <div class="field">
-            <label>No-shows (%)</label>
-            <input type="number" id="ns_pct" name="no_show_pct" readonly class="computed" tabindex="-1" placeholder="—">
-            <span class="field-hint">No-shows ÷ number of bookings</span>
+            <label>Walk-ins (#)</label>
+            <input type="number" id="walkin" name="walk_in_count" placeholder="0" min="0">
           </div>
           <div class="field">
-            <label>Walk-ins (#)</label>
-            <input type="number" id="walkin" name="walk_in_count" readonly class="computed" tabindex="-1" placeholder="—">
-            <span class="field-hint">Pax − bookings + no-shows</span>
+            <label>Number of bookings</label>
+            <input type="number" id="resa" name="expected_guests" readonly class="computed" tabindex="-1" placeholder="—">
+            <span class="field-hint">Pax + no-shows − walk-ins</span>
+          </div>
+          <div class="field">
+            <label>No-shows (%)</label>
+            <input type="number" id="ns_pct" name="no_show_pct" readonly class="computed" tabindex="-1" placeholder="—">
+            <span class="field-hint">No-shows ÷ bookings</span>
           </div>
         </div>
       </div>
@@ -456,31 +457,29 @@
   caEl.addEventListener('input', calcTicket);
   covEl.addEventListener('input', calcTicket);
 
-  // No-show %
+  // Calculs bloc 3
+  // Number of bookings = pax + no-shows - walk-ins
+  // No-show % = no-shows / bookings
   const resaEl  = document.getElementById('resa');
   const nsNbEl  = document.getElementById('ns_nb');
   const nsPctEl = document.getElementById('ns_pct');
-
   const walkinEl = document.getElementById('walkin');
 
   function calcNS() {
-    const resa = parseInt(resaEl.value);
-    const ns   = parseInt(nsNbEl.value);
-    const pax  = parseInt(covEl.value);
-    if (resa > 0 && ns >= 0) {
-      nsPctEl.value = ((ns / resa) * 100).toFixed(1);
+    const pax    = parseInt(covEl.value)  || 0;
+    const ns     = parseInt(nsNbEl.value) || 0;
+    const wi     = parseInt(walkinEl.value) || 0;
+    const resa   = pax + ns - wi;
+    if (pax > 0 || ns > 0 || wi > 0) {
+      resaEl.value  = resa >= 0 ? resa : 0;
+      nsPctEl.value = resa > 0 ? ((ns / resa) * 100).toFixed(1) : '';
     } else {
+      resaEl.value  = '';
       nsPctEl.value = '';
     }
-    if (pax >= 0 && resa >= 0 && ns >= 0) {
-      const wi = pax - resa + ns;
-      walkinEl.value = wi >= 0 ? wi : 0;
-    } else {
-      walkinEl.value = '';
-    }
   }
-  resaEl.addEventListener('input', calcNS);
   nsNbEl.addEventListener('input', calcNS);
+  walkinEl.addEventListener('input', calcNS);
   covEl.addEventListener('input', calcNS);
 
   // ── CONSTRUCTION EMAIL HTML ──
@@ -557,14 +556,14 @@
           <td style="padding:13px 0;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#8a8680;">No-shows</td>
           <td style="padding:8px 0 13px;text-align:right;">
               <p style="margin:0;font-size:16px;font-weight:700;color:#1a1916;">${N(d.no_show_count)}</p>
-              <p style="margin:3px 0 0;font-size:11px;font-weight:400;color:#c0392b;">${N(d.no_show_pct)}%</p>
+              <p style="margin:3px 0 0;font-size:11px;font-weight:400;color:#c0392b;">${(d.expected_guests && d.no_show_count) ? ((Number(d.no_show_count)/Number(d.expected_guests))*100).toFixed(1)+'%' : '—'}</p>
             </td>
         </tr>
         <tr>
           <td style="padding:8px 0 13px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#8a8680;vertical-align:top;">Walk-ins</td>
           <td style="padding:8px 0 13px;text-align:right;vertical-align:top;">
               <p style="margin:0;font-size:16px;font-weight:700;color:#1a1916;">${N(d.walk_in_count)}</p>
-              <p style="margin:3px 0 0;font-size:11px;font-weight:400;color:#8a8680;">${(d.expected_guests && d.walk_in_count) ? ((Number(d.walk_in_count)/Number(d.expected_guests))*100).toFixed(1)+'%' : '—'}</p>
+              <p style="margin:3px 0 0;font-size:11px;font-weight:400;color:#8a8680;">${(d.number_covers && d.walk_in_count) ? ((Number(d.walk_in_count)/Number(d.number_covers))*100).toFixed(1)+'%' : '—'}</p>
             </td>
         </tr>
       </table>
