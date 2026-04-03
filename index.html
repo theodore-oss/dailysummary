@@ -705,6 +705,7 @@
 
     try {
       await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+        from_name: 'Rosario',
         subject:  subject,
         html_body: buildEmailHTML(data)
       });
